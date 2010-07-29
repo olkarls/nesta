@@ -1,0 +1,14 @@
+%nav#breadcrumbs
+  %a{ :href => "/" } Home
+  &raquo;
+  - if @page.parent
+    %a{ :href => @page.parent.abspath }= @page.parent.heading
+    &raquo;
+  = @page.heading
+
+= haml :meta, :layout => false
+
+%article
+  ~ @page.to_html
+
+= haml :sidebar, :layout => false

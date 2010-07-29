@@ -1,0 +1,6 @@
+- unless pages.empty?
+  %ol.pages
+    - pages.each do |page|
+      %li
+        - haml_tag heading do
+          %a{ :href => page.abspath }= page.heading

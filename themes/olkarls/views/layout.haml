@@ -1,0 +1,24 @@
+!!! 5
+%html{ :lang => "en" }
+  %head
+    %meta{ "http-equiv" => "content-type", "content" => "text/html; charset=utf-8" }
+    - if @description
+      %meta{ "name" => "description", "content" => @description }
+    - if @keywords
+      %meta{ "name" => "keywords", "content" => @keywords }
+    %title= @title
+    %link{ :href => "/css/master.css", :media => "screen", :rel => "stylesheet", :type => "text/css" }
+    - if local_stylesheet?
+      %link{ :href => "/css/local.css", :media => "screen", :rel => "stylesheet", :type => "text/css" }
+    %link{ :href => "/articles.xml", :rel => "alternate", :type => "application/atom+xml" }
+  %body{ :class => @body_class }
+    %header#identity
+      %p.title= @heading
+      %p.subtitle= @subtitle unless @subtitle.eql?("")
+    %section#main_content
+      = yield
+    %footer#page_footer
+      %p
+        Powered by
+        %a{ :href => "http://effectif.com/nesta" } nesta
+    = haml :analytics, :layout => false

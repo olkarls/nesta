@@ -1,0 +1,13 @@
+%section#meta
+  %p
+    Posted by 
+    %a{ :href => "/about" }= "Ola Karlsson"
+    - if @page.date
+      on 
+      = @page.date.strftime("%Y-%m-%d")
+    - unless @page.categories.empty?
+      filed under
+      - @page.categories.each do |category|
+        %a{ :href => category.abspath }= category.heading
+    = "."
+    

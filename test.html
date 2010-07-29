@@ -1,0 +1,238 @@
+<div class="highlight"><pre><span class="nb">require</span> <span class="s2">&quot;time&quot;</span>
+
+<span class="nb">require</span> <span class="s2">&quot;rubygems&quot;</span>
+<span class="nb">require</span> <span class="s2">&quot;maruku&quot;</span>
+<span class="nb">require</span> <span class="s2">&quot;redcloth&quot;</span>
+
+<span class="k">class</span> <span class="nc">FileModel</span>
+  <span class="no">FORMATS</span> <span class="o">=</span> <span class="o">[</span><span class="ss">:mdown</span><span class="p">,</span> <span class="ss">:haml</span><span class="p">,</span> <span class="ss">:textile</span><span class="o">]</span>
+  <span class="vc">@@cache</span> <span class="o">=</span> <span class="p">{}</span>
+  
+  <span class="kp">attr_reader</span> <span class="ss">:filename</span><span class="p">,</span> <span class="ss">:mtime</span>
+
+  <span class="k">def</span> <span class="nc">self</span><span class="o">.</span><span class="nf">model_path</span><span class="p">(</span><span class="n">basename</span> <span class="o">=</span> <span class="kp">nil</span><span class="p">)</span>
+    <span class="no">Nesta</span><span class="o">::</span><span class="no">Config</span><span class="o">.</span><span class="n">content_path</span><span class="p">(</span><span class="n">basename</span><span class="p">)</span>
+  <span class="k">end</span>
+  
+  <span class="k">def</span> <span class="nc">self</span><span class="o">.</span><span class="nf">find_all</span>
+    <span class="n">file_pattern</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">model_path</span><span class="p">,</span> <span class="s2">&quot;**&quot;</span><span class="p">,</span> <span class="s2">&quot;*.{</span><span class="si">#{</span><span class="no">FORMATS</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">}&quot;</span><span class="p">)</span>
+    <span class="no">Dir</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">file_pattern</span><span class="p">)</span><span class="o">.</span><span class="n">map</span> <span class="k">do</span> <span class="o">|</span><span class="n">path</span><span class="o">|</span>
+      <span class="n">relative</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">#{</span><span class="n">model_path</span><span class="si">}</span><span class="s2">/&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+      <span class="nb">load</span><span class="p">(</span><span class="n">relative</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sr">/\.(</span><span class="si">#{</span><span class="no">FORMATS</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;|&#39;</span><span class="p">)</span><span class="si">}</span><span class="sr">)/</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">))</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+  
+  <span class="k">def</span> <span class="nc">self</span><span class="o">.</span><span class="nf">needs_loading?</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+    <span class="vc">@@cache</span><span class="o">[</span><span class="n">path</span><span class="o">].</span><span class="n">nil?</span> <span class="o">||</span> <span class="no">File</span><span class="o">.</span><span class="n">mtime</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="o">&gt;</span> <span class="vc">@@cache</span><span class="o">[</span><span class="n">path</span><span class="o">].</span><span class="n">mtime</span>
+  <span class="k">end</span>
+  
+  <span class="k">def</span> <span class="nc">self</span><span class="o">.</span><span class="nf">load</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="no">FORMATS</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="nb">format</span><span class="o">|</span>
+      <span class="n">filename</span> <span class="o">=</span> <span class="n">model_path</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">#{</span><span class="n">path</span><span class="si">}</span><span class="s2">.</span><span class="si">#{</span><span class="nb">format</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+      <span class="k">if</span> <span class="no">File</span><span class="o">.</span><span class="n">exist?</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="n">needs_loading?</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+        <span class="vc">@@cache</span><span class="o">[</span><span class="n">path</span><span class="o">]</span> <span class="o">=</span> <span class="nb">self</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="k">break</span>
+      <span class="k">end</span>
+    <span class="k">end</span>
+    <span class="vc">@@cache</span><span class="o">[</span><span class="n">path</span><span class="o">]</span>
+  <span class="k">end</span>
+  
+  <span class="k">def</span> <span class="nc">self</span><span class="o">.</span><span class="nf">purge_cache</span>
+    <span class="vc">@@cache</span> <span class="o">=</span> <span class="p">{}</span>
+  <span class="k">end</span>
+  
+  <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+    <span class="vi">@filename</span> <span class="o">=</span> <span class="n">filename</span>
+    <span class="vi">@format</span> <span class="o">=</span> <span class="n">filename</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">last</span><span class="o">.</span><span class="n">to_sym</span>
+    <span class="n">parse_file</span>
+    <span class="vi">@mtime</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">mtime</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+  <span class="k">end</span>
+
+  <span class="k">def</span> <span class="nf">permalink</span>
+    <span class="no">File</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="vi">@filename</span><span class="p">,</span> <span class="s2">&quot;.*&quot;</span><span class="p">)</span>
+  <span class="k">end</span>
+
+  <span class="k">def</span> <span class="nf">path</span>
+    <span class="n">abspath</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sr">/^\//</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+  <span class="k">end</span>
+  
+  <span class="k">def</span> <span class="nf">abspath</span>
+    <span class="n">prefix</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vi">@filename</span><span class="p">)</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="no">Nesta</span><span class="o">::</span><span class="no">Config</span><span class="o">.</span><span class="n">page_path</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="n">permalink</span><span class="p">)</span>
+  <span class="k">end</span>
+  
+  <span class="k">def</span> <span class="nf">to_html</span>
+    <span class="k">case</span> <span class="vi">@format</span>
+    <span class="k">when</span> <span class="ss">:mdown</span>
+      <span class="no">Maruku</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">markup</span><span class="p">)</span><span class="o">.</span><span class="n">to_html</span>
+    <span class="k">when</span> <span class="ss">:haml</span>
+      <span class="no">Haml</span><span class="o">::</span><span class="no">Engine</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">markup</span><span class="p">)</span><span class="o">.</span><span class="n">to_html</span>
+    <span class="k">when</span> <span class="ss">:textile</span>
+      <span class="no">RedCloth</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">markup</span><span class="p">)</span><span class="o">.</span><span class="n">to_html</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+  
+  <span class="k">def</span> <span class="nf">last_modified</span>
+    <span class="vi">@last_modified</span> <span class="o">||=</span> <span class="no">File</span><span class="o">.</span><span class="n">stat</span><span class="p">(</span><span class="vi">@filename</span><span class="p">)</span><span class="o">.</span><span class="n">mtime</span>
+  <span class="k">end</span>
+  
+  <span class="k">def</span> <span class="nf">description</span>
+    <span class="n">metadata</span><span class="p">(</span><span class="s2">&quot;description&quot;</span><span class="p">)</span>
+  <span class="k">end</span>
+  
+  <span class="k">def</span> <span class="nf">keywords</span>
+    <span class="n">metadata</span><span class="p">(</span><span class="s2">&quot;keywords&quot;</span><span class="p">)</span>
+  <span class="k">end</span>
+
+  <span class="kp">private</span>
+    <span class="k">def</span> <span class="nf">markup</span>
+      <span class="vi">@markup</span>
+    <span class="k">end</span>
+
+    <span class="k">def</span> <span class="nf">metadata</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+      <span class="vi">@metadata</span><span class="o">[</span><span class="n">key</span><span class="o">]</span>
+    <span class="k">end</span>
+    
+    <span class="k">def</span> <span class="nf">paragraph_is_metadata</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+      <span class="n">text</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">first</span> <span class="o">=~</span> <span class="sr">/^[\w ]+:/</span>
+    <span class="k">end</span>
+    
+    <span class="k">def</span> <span class="nf">parse_file</span>
+      <span class="n">first_para</span><span class="p">,</span> <span class="n">remaining</span> <span class="o">=</span> <span class="no">File</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="vi">@filename</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sr">/\r?\n\r?\n/</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+      <span class="vi">@metadata</span> <span class="o">=</span> <span class="p">{}</span>
+      <span class="k">if</span> <span class="n">paragraph_is_metadata</span><span class="p">(</span><span class="n">first_para</span><span class="p">)</span>
+        <span class="vi">@markup</span> <span class="o">=</span> <span class="n">remaining</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="k">in</span> <span class="n">first_para</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span> <span class="k">do</span>
+          <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sr">/\s*:\s*/</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+          <span class="vi">@metadata</span><span class="o">[</span><span class="n">key</span><span class="o">.</span><span class="n">downcase</span><span class="o">]</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">chomp</span>
+        <span class="k">end</span>
+      <span class="k">else</span>
+        <span class="vi">@markup</span> <span class="o">=</span> <span class="o">[</span><span class="n">first_para</span><span class="p">,</span> <span class="n">remaining</span><span class="o">].</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
+      <span class="k">end</span>
+    <span class="k">rescue</span> <span class="no">Errno</span><span class="o">::</span><span class="no">ENOENT</span>  <span class="c1"># file not found</span>
+      <span class="k">raise</span> <span class="no">Sinatra</span><span class="o">::</span><span class="no">NotFound</span>
+    <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="k">class</span> <span class="nc">Page</span> <span class="o">&lt;</span> <span class="no">FileModel</span>
+  <span class="k">module</span> <span class="nn">ClassMethods</span>
+    <span class="k">def</span> <span class="nf">model_path</span><span class="p">(</span><span class="n">basename</span> <span class="o">=</span> <span class="kp">nil</span><span class="p">)</span>
+      <span class="no">Nesta</span><span class="o">::</span><span class="no">Config</span><span class="o">.</span><span class="n">page_path</span><span class="p">(</span><span class="n">basename</span><span class="p">)</span>
+    <span class="k">end</span>
+    
+    <span class="k">def</span> <span class="nf">find_by_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+      <span class="nb">load</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">end</span>
+
+    <span class="k">def</span> <span class="nf">find_articles</span>
+      <span class="n">find_all</span><span class="o">.</span><span class="n">select</span> <span class="p">{</span> <span class="o">|</span><span class="n">page</span><span class="o">|</span> <span class="n">page</span><span class="o">.</span><span class="n">date</span> <span class="p">}</span><span class="o">.</span><span class="n">sort</span> <span class="p">{</span> <span class="o">|</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">|</span> <span class="n">y</span><span class="o">.</span><span class="n">date</span> <span class="o">&lt;=&gt;</span> <span class="n">x</span><span class="o">.</span><span class="n">date</span> <span class="p">}</span>
+    <span class="k">end</span>
+    
+    <span class="k">def</span> <span class="nf">menu_items</span>
+      <span class="n">menu</span> <span class="o">=</span> <span class="no">Nesta</span><span class="o">::</span><span class="no">Config</span><span class="o">.</span><span class="n">content_path</span><span class="p">(</span><span class="s2">&quot;menu.txt&quot;</span><span class="p">)</span>
+      <span class="n">pages</span> <span class="o">=</span> <span class="o">[]</span>
+      <span class="k">if</span> <span class="no">File</span><span class="o">.</span><span class="n">exist?</span><span class="p">(</span><span class="n">menu</span><span class="p">)</span>
+        <span class="no">File</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">menu</span><span class="p">)</span><span class="o">.</span><span class="n">each</span> <span class="p">{</span> <span class="o">|</span><span class="n">line</span><span class="o">|</span> <span class="n">pages</span> <span class="o">&lt;&lt;</span> <span class="no">Page</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">chomp</span><span class="p">)</span> <span class="p">}</span>
+      <span class="k">end</span>
+      <span class="n">pages</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+
+  <span class="kp">extend</span> <span class="no">ClassMethods</span>
+  
+  <span class="k">def</span> <span class="nf">==</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+    <span class="nb">self</span><span class="o">.</span><span class="n">path</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">path</span>
+  <span class="k">end</span>
+  
+  <span class="k">def</span> <span class="nf">heading</span>
+    <span class="n">regex</span> <span class="o">=</span> <span class="k">case</span> <span class="vi">@format</span>
+      <span class="k">when</span> <span class="ss">:mdown</span><span class="sr"></span>
+<span class="sr">        /^#\s*(.*)/</span>
+      <span class="k">when</span> <span class="ss">:haml</span><span class="sr"></span>
+<span class="sr">        /^\s*%h1\s+(.*)/</span>
+      <span class="k">when</span> <span class="ss">:textile</span><span class="sr"></span>
+<span class="sr">        /^\s*h1\.\s+(.*)/</span>
+      <span class="k">end</span>
+    <span class="n">markup</span> <span class="o">=~</span> <span class="n">regex</span>
+    <span class="no">Regexp</span><span class="o">.</span><span class="n">last_match</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+  <span class="k">end</span>
+  
+  <span class="k">def</span> <span class="nf">date</span><span class="p">(</span><span class="nb">format</span> <span class="o">=</span> <span class="kp">nil</span><span class="p">)</span>
+    <span class="vi">@date</span> <span class="o">||=</span> <span class="k">if</span> <span class="n">metadata</span><span class="p">(</span><span class="s2">&quot;date&quot;</span><span class="p">)</span>
+      <span class="k">if</span> <span class="nb">format</span> <span class="o">==</span> <span class="ss">:xmlschema</span>
+        <span class="no">Time</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">metadata</span><span class="p">(</span><span class="s2">&quot;date&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">xmlschema</span>
+      <span class="k">else</span>
+        <span class="no">DateTime</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">metadata</span><span class="p">(</span><span class="s2">&quot;date&quot;</span><span class="p">))</span>
+      <span class="k">end</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+  
+  <span class="k">def</span> <span class="nf">atom_id</span>
+    <span class="n">metadata</span><span class="p">(</span><span class="s2">&quot;atom id&quot;</span><span class="p">)</span>
+  <span class="k">end</span>
+  
+  <span class="k">def</span> <span class="nf">read_more</span>
+    <span class="n">metadata</span><span class="p">(</span><span class="s2">&quot;read more&quot;</span><span class="p">)</span> <span class="o">||</span> <span class="s2">&quot;Continue reading&quot;</span>
+  <span class="k">end</span>
+  
+  <span class="k">def</span> <span class="nf">summary</span>
+    <span class="k">if</span> <span class="n">summary_text</span> <span class="o">=</span> <span class="n">metadata</span><span class="p">(</span><span class="s2">&quot;summary&quot;</span><span class="p">)</span>
+      <span class="n">summary_text</span><span class="o">.</span><span class="n">gsub!</span><span class="p">(</span><span class="s1">&#39;\n&#39;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+      <span class="k">case</span> <span class="vi">@format</span>
+      <span class="k">when</span> <span class="ss">:textile</span>
+        <span class="no">RedCloth</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">summary_text</span><span class="p">)</span><span class="o">.</span><span class="n">to_html</span>
+      <span class="k">else</span>
+        <span class="no">Maruku</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">summary_text</span><span class="p">)</span><span class="o">.</span><span class="n">to_html</span>
+      <span class="k">end</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+  
+  <span class="k">def</span> <span class="nf">body</span>
+    <span class="k">case</span> <span class="vi">@format</span>
+    <span class="k">when</span> <span class="ss">:mdown</span>
+      <span class="n">body_text</span> <span class="o">=</span> <span class="n">markup</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sr">/^#[^#].*$\r?\n(\r?\n)?/</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+      <span class="no">Maruku</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">body_text</span><span class="p">)</span><span class="o">.</span><span class="n">to_html</span>
+    <span class="k">when</span> <span class="ss">:haml</span>
+      <span class="n">body_text</span> <span class="o">=</span> <span class="n">markup</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sr">/^\s*%h1\s+.*$\r?\n(\r?\n)?/</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+      <span class="no">Haml</span><span class="o">::</span><span class="no">Engine</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">body_text</span><span class="p">)</span><span class="o">.</span><span class="n">render</span>
+    <span class="k">when</span> <span class="ss">:textile</span>
+      <span class="n">body_text</span> <span class="o">=</span> <span class="n">markup</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sr">/^\s*h1\.\s+.*$\r?\n(\r?\n)?/</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+      <span class="no">RedCloth</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">body_text</span><span class="p">)</span><span class="o">.</span><span class="n">to_html</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+  
+  <span class="k">def</span> <span class="nf">categories</span>
+    <span class="n">categories</span> <span class="o">=</span> <span class="n">metadata</span><span class="p">(</span><span class="s2">&quot;categories&quot;</span><span class="p">)</span>
+    <span class="n">paths</span> <span class="o">=</span> <span class="n">categories</span><span class="o">.</span><span class="n">nil?</span> <span class="p">?</span> <span class="o">[]</span> <span class="p">:</span> <span class="n">categories</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">map</span> <span class="p">{</span> <span class="o">|</span><span class="nb">p</span><span class="o">|</span> <span class="nb">p</span><span class="o">.</span><span class="n">strip</span> <span class="p">}</span>
+    <span class="n">valid_paths</span><span class="p">(</span><span class="n">paths</span><span class="p">)</span><span class="o">.</span><span class="n">map</span> <span class="p">{</span> <span class="o">|</span><span class="nb">p</span><span class="o">|</span> <span class="no">Page</span><span class="o">.</span><span class="n">find_by_path</span><span class="p">(</span><span class="nb">p</span><span class="p">)</span> <span class="p">}</span><span class="o">.</span><span class="n">sort</span> <span class="k">do</span> <span class="o">|</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">|</span>
+      <span class="n">x</span><span class="o">.</span><span class="n">heading</span><span class="o">.</span><span class="n">downcase</span> <span class="o">&lt;=&gt;</span> <span class="n">y</span><span class="o">.</span><span class="n">heading</span><span class="o">.</span><span class="n">downcase</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+  
+  <span class="k">def</span> <span class="nf">parent</span>
+    <span class="no">Page</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="no">File</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+  <span class="k">end</span>
+  
+  <span class="k">def</span> <span class="nf">pages</span>
+    <span class="no">Page</span><span class="o">.</span><span class="n">find_all</span><span class="o">.</span><span class="n">select</span> <span class="k">do</span> <span class="o">|</span><span class="n">page</span><span class="o">|</span>
+      <span class="n">page</span><span class="o">.</span><span class="n">date</span><span class="o">.</span><span class="n">nil?</span> <span class="o">&amp;&amp;</span> <span class="n">page</span><span class="o">.</span><span class="n">categories</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="nb">self</span><span class="p">)</span>
+    <span class="k">end</span><span class="o">.</span><span class="n">sort</span> <span class="k">do</span> <span class="o">|</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">|</span>
+      <span class="n">x</span><span class="o">.</span><span class="n">heading</span><span class="o">.</span><span class="n">downcase</span> <span class="o">&lt;=&gt;</span> <span class="n">y</span><span class="o">.</span><span class="n">heading</span><span class="o">.</span><span class="n">downcase</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+  
+  <span class="k">def</span> <span class="nf">articles</span>
+    <span class="no">Page</span><span class="o">.</span><span class="n">find_articles</span><span class="o">.</span><span class="n">select</span> <span class="p">{</span> <span class="o">|</span><span class="n">article</span><span class="o">|</span> <span class="n">article</span><span class="o">.</span><span class="n">categories</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="nb">self</span><span class="p">)</span> <span class="p">}</span>
+  <span class="k">end</span>
+  
+  <span class="kp">private</span>
+    <span class="k">def</span> <span class="nf">valid_paths</span><span class="p">(</span><span class="n">paths</span><span class="p">)</span>
+      <span class="n">paths</span><span class="o">.</span><span class="n">select</span> <span class="k">do</span> <span class="o">|</span><span class="n">path</span><span class="o">|</span>
+        <span class="no">FORMATS</span><span class="o">.</span><span class="n">detect</span> <span class="k">do</span> <span class="o">|</span><span class="nb">format</span><span class="o">|</span>
+          <span class="no">File</span><span class="o">.</span><span class="n">exist?</span><span class="p">(</span>
+              <span class="no">File</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="no">Nesta</span><span class="o">::</span><span class="no">Config</span><span class="o">.</span><span class="n">page_path</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">#{</span><span class="n">path</span><span class="si">}</span><span class="s2">.</span><span class="si">#{</span><span class="nb">format</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">))</span>
+        <span class="k">end</span>
+      <span class="k">end</span>
+    <span class="k">end</span>
+<span class="k">end</span>
+</pre></div>

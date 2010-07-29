@@ -1,0 +1,4 @@
+- @articles = Page.find_articles[0..7]
+
+%h1 Recent articles
+= haml :summaries, :layout => false, :locals => { :pages => @articles, :heading => :h2 }
