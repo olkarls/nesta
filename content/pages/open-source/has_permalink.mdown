@@ -1,11 +1,14 @@
 date: 2010-07-01
-categories: projects, ruby, gem, seo, blog
+categories: open-source, blog
 read more: Read more about has_permalink
 heading: New gem "has_permalink"
 template: article
 
 # has_permalink
-Yesterday I published my first <a href="http://rubygems.org/gems/has_permalink">gem</a> to <a href="http://rubygems.org">rubygems.org</a><!--more-->
+
+Yesterday I published my first <a href="http://rubygems.org/gems/has_permalink">gem</a> to <a href="http://rubygems.org">rubygems.org</a>
+
+<!--more-->
 
 A gem for generating permalinks to use in an URL from any other attribute in the same <code>ActiveRecord</code> model.
 
@@ -71,6 +74,6 @@ Please try it out and give me some feedback. Get the source code <a href="http:/
 
 ## TODO
 
-* Extend ActiveModel instead of ActiveRecord
+* Extend <code>ActiveModel</code> instead of <code>ActiveRecord</code>
 * Create a generator test
 * Give the possibility to call the "permalink" field something else

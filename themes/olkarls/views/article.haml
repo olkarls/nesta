@@ -10,5 +10,10 @@
 
 %article
   ~ @page.to_html
+  
+  %p
+    Did you enjoy this post? <a href="/feed.xml">Grab the feed here</a>.
+
+  = haml :comments, :layout => false
 
 = haml :sidebar, :layout => false

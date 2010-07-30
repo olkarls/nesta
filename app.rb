@@ -3,7 +3,7 @@ require "haml"
 require "sass"
 require 'rack/codehighlighter'
 
-use Rack::Codehighlighter, :pygments_api, :markdown => true, :element => "pre>code", :pattern => /\A:::(\w+)\s*(\n|&#x000A;)/i, :logging => false
+use Rack::Codehighlighter, :pygments_api, :markdown => true, :element => "pre>code", :pattern => /\A:::(\w+)\s*(\n|&#x000A;)/i, :logging => true
 
 $LOAD_PATH << "lib"
 
